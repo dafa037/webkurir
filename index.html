@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Rating Kurir</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7fafc;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #3182ce;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            font-size: 24px;
+            margin: 0;
+        }
+        button {
+            background-color: #2b6cb0;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2c5282;
+        }
+        main {
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+        .form-container, .ratings-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .form-container h2, .ratings-container h2 {
+            margin-top: 0;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .rating-container {
+            direction: rtl;
+            display: inline-block;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .rating-container span {
+            color: #e4e5e9;
+        }
+        .rating-container span:hover,
+        .rating-container span.selected {
+            color: #ffc107;
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #38a169;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+        }
+        .modal-content button {
+            width: 100%;
+        }
+        textarea::placeholder {
+        font-family: 'Arial', sans-serif; 
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <h1><i class="fas fa-motorcycle"></i> Rating Kurir</h1>
+        <button id="loginBtn">Login Admin</button>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Form Rating -->
+        <div class="form-container">
+            <h2>Beri Rating untuk Kurir Anda</h2>
+            <form id="ratingForm">
+                <label for="courierName">Nama Kurir</label>
+                <input type="text" id="courierName" required placeholder="Akmal Daffa">
+                <label for="recipientName">Nama Penerima</label>
+                <input type="text" id="recipientName" required placeholder="Masukkan nama anda">
+                
+                <label>Rating</label>
+                <div class="rating-container">
+                    <span class="star" data-value="5">★</span>
+                    <span class="star" data-value="4">★</span>
+                    <span class="star" data-value="3">★</span>
+                    <span class="star" data-value="2">★</span>
+                    <span class="star" data-value="1">★</span>
+                </div>
+                <input type="hidden" id="ratingValue" name="rating" value="0">
+               </div>
+              <div>
+                <label for="feedback">Saran/Komentar</label>
+                <textarea class="text" id="feedback" rows="4" required placeholder="Bagaimana pengalaman Anda dengan kurir ini?"></textarea>
+                
+                <button type="submit">Kirim Rating</button>
+            </form>
+        </div>
+
+        <!-- Daftar Rating -->
+        <div class="ratings-container">
+            <h2>Rating & Umpan Balik Pelanggan</h2>
+            <div id="ratingsList">
+                <p>Memuat data rating...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h3>Admin Login</h3>
+            <label for="username">Username</label>
+            <input type="text" id="username" required>
+            <label for="password">Password</label>
+            <input type="password" id="password" required>
+            <button id="loginSubmitBtn">Login</button>
+            <button id="closeLoginModal">Close</button>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <span id="notificationMessage">Pesan notifikasi</span>
+    </div>
+
+    <script>
+        let ratings = [
+            { id: 1, courierName: 'Akmal Daffa', recipientName: 'John Doe', rating: 4, feedback: 'Kurir sangat ramah dan tepat waktu.', date: '2023-06-15T10:30:00', flagged: false },
+        ];
+
+        const saveRatingsToStorage = () => {
+            localStorage.setItem('courierRatings', JSON.stringify(ratings));
+        };
+
+        const loadRatingsFromStorage = () => {
+            const savedRatings = localStorage.getItem('courierRatings');
+            if (savedRatings) {
+                ratings = JSON.parse(savedRatings);
+            }
+        };
+
+        const displayPublicRatings = () => {
+            const ratingsList = document.getElementById('ratingsList');
+            ratingsList.innerHTML = ''; // Clear existing ratings
+
+            ratings.forEach(rating => {
+                const ratingElement = document.createElement('div');
+                ratingElement.innerHTML = `
+                    <h3>${rating.courierName} - ${rating.rating} ★</h3>
+                    <p>Penerima: ${rating.recipientName}</p> 
+                    <p>${rating.feedback}</p>
+                    <p><small>${new Date(rating.date).toLocaleString()}</small></p>
+                `;
+                ratingsList.appendChild(ratingElement);
+            });
+        };
+
+        document.getElementById('ratingForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const courierName = document.getElementById('courierName').value.trim();
+            const recipientName = document.getElementById('recipientName').value.trim(); 
+            const rating = parseInt(document.getElementById('ratingValue').value);
+            const feedback = document.getElementById('feedback').value.trim();
+
+            if (!courierName || !recipientName || rating === 0 || !feedback) {
+                showNotification('Mohon lengkapi semua field', false);
+                return;
+            }
+
+            const newRating = {
+                id: ratings.length + 1,
+                courierName,
+                recipientName,
+                rating,
+                feedback,
+                date: new Date().toISOString(),
+                flagged: false
+            };
+
+            ratings.push(newRating);
+            saveRatingsToStorage();
+            displayPublicRatings();
+            showNotification('Terima kasih atas rating Anda!');
+            document.getElementById('ratingForm').reset();
+            document.getElementById('ratingValue').value = 0;
+        });
+
+        const showNotification = (message, isSuccess = true) => {
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notificationMessage');
+            notificationMessage.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        };
+
+        const stars = document.querySelectorAll('.star');
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                const value = parseInt(star.getAttribute('data-value'));
+                document.getElementById('ratingValue').value = value;
+
+                stars.forEach(s => {
+                    s.classList.toggle('selected', parseInt(s.getAttribute('data-value')) <= value);
+                });
+            });
+        });
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            document.getElementById('loginModal').style.display = 'flex';
+        });
+
+        document.getElementById('closeLoginModal').addEventListener('click', () => {
+            document.getElementById('loginModal').style.display = 'none';
+        });
+
+        document.getElementById('loginSubmitBtn').addEventListener('click', () => {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (username === 'akmal' && password === 'prima') {
+                showNotification('Login berhasil');
+                document.getElementById('loginModal').style.display = 'none';
+                // Here you can redirect to admin dashboard or show admin features
+            } else {
+                showNotification('Username atau password salah', false);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRatingsFromStorage();
+            displayPublicRatings();
+        });
+    </script>
+</body>
+</html>
